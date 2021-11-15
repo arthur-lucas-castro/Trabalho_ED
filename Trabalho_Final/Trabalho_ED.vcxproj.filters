@@ -13,10 +13,42 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Arquivos de Origem\Ordenacoes">
+      <UniqueIdentifier>{9e41ad0e-16a3-460c-806d-37e15d4bc5ca}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Arquivos de Cabeçalho\Ordenacoes">
+      <UniqueIdentifier>{f6906848-2c79-4aba-8d1b-3bc18ab93a57}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Arquivos de Cabeçalho\Models">
+      <UniqueIdentifier>{2f3d8e8c-48a0-460d-b7cd-76d7b17df37a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Trabalho_ED.cpp">
       <Filter>Arquivos de Origem</Filter>
     </ClCompile>
+    <ClCompile Include="QuickSort.h">
+      <Filter>Arquivos de Cabeçalho\Ordenacoes</Filter>
+    </ClCompile>
+    <ClCompile Include="QuickSort.cpp">
+      <Filter>Arquivos de Origem\Ordenacoes</Filter>
+    </ClCompile>
+    <ClCompile Include="MergeSortExterno.cpp">
+      <Filter>Arquivos de Origem\Ordenacoes</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Pacote.h">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
+    <ClInclude Include="MergeSortExterno.h">
+      <Filter>Arquivos de Cabeçalho\Ordenacoes</Filter>
+    </ClInclude>
+    <ClInclude Include="Arquivo.h">
+      <Filter>Arquivos de Cabeçalho\Models</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>Arquivos de Cabeçalho</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

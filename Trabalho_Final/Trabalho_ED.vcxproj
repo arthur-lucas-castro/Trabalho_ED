@@ -139,7 +139,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="MergeSortExterno.cpp" />
+    <ClCompile Include="QuickSort.cpp" />
+    <ClCompile Include="QuickSort.h" />
     <ClCompile Include="Trabalho_ED.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Arquivo.h" />
+    <ClInclude Include="Config.h" />
+    <ClInclude Include="MergeSortExterno.h" />
+    <ClInclude Include="Pacote.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
