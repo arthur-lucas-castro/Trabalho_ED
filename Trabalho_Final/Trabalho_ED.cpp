@@ -47,7 +47,7 @@ public:
         int numArqs = CriaArquivosOrdenados(nome);
         int bufferPorArquivo = N / (numArqs + 1);
         Merge(numArqs, bufferPorArquivo, "ordenado.bin");
-        //ApagaArquivosTemporarios(numArqs);
+        ApagaArquivosTemporarios(numArqs);
     }
 private:
     int ProcuraMenor(Arquivo *arquivo, int tamanhoBufferPorArquivo, pacote* menor, int numArquivos);
@@ -126,13 +126,13 @@ void MergeSortExterno::Merge(int numArquivos, int tamanhoBufferPorArquivo, strin
     Arquivo* arquivos;
     arquivos = new Arquivo[numArquivos];
     PreencherObjetosArquivos(numArquivos, arquivos, tamanhoBufferPorArquivo);
-    int qtdBuffer = 0, teste = 0;
+    int qtdBuffer = 0;
     pacote menor;
+    remove(NomeArquivoSaida);
     while (ProcuraMenor(arquivos, tamanhoBufferPorArquivo, &menor, numArquivos) == 1)
     {
         bufferDeSaida[qtdBuffer] = menor;
         qtdBuffer++;
-        teste++;
         if (qtdBuffer == tamanhoBufferPorArquivo) {
             fstream arquivoTemp(NomeArquivoSaida, ios::binary | ios::out | ios::app);
             for (int i = 0; i < qtdBuffer; i++)
