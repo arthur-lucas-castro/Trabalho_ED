@@ -4,11 +4,10 @@
 
 #include <sstream>
 using namespace std;
-#define N 2000
-#define NomeArquivoPadrao "arquivoTemp"
+#define N 1000
+#define NomeArquivoTemporarioPadrao "arquivoTemp"
 #define NomeArquivoEntrada "captura_pacotes.bin"
 #define NomeArquivoSaida "ordenado.bin"
-// dados armazenados no arquivo
 
 struct pacote {
     unsigned indice;
@@ -26,7 +25,6 @@ public:
     pacote* buffer;
 };
 class QuickSort {
-    friend class MergeSortExterno;
 public:
     QuickSort(pacote *pacotes) {
         this->pacotes = pacotes;
@@ -36,8 +34,8 @@ public:
 
 private:
     pacote *pacotes;
-    int Partition(const int start, const int end);
-    void Swap( int i,  int j);
+    int Particionar(const int start, const int end);
+    void Trocar( int i,  int j);
 };
 
 class MergeSortExterno {
@@ -46,44 +44,47 @@ class MergeSortExterno {
 public:
     void OrdenarExternamente(const char* nome)
     {
-        string novo;
-        int numArqs = criaArquivosOrdenados(nome);
-        int buffers = N / (numArqs + 1);
-        Merge(numArqs, buffers, "ordenado.bin");
-
-    };
+        int numArqs = CriaArquivosOrdenados(nome);
+        int bufferPorArquivo = N / (numArqs + 1);
+        Merge(numArqs, bufferPorArquivo, "ordenado.bin");
+        //ApagaArquivosTemporarios(numArqs);
+    }
 private:
-    int ProcuraMenor(Arquivo *arquivo, int K, pacote* menor, int numArquivos);
-    void Merge(int numArquivos, int K, string nome);
-    int criaArquivosOrdenados(string nome);
+    int ProcuraMenor(Arquivo *arquivo, int tamanhoBufferPorArquivo, pacote* menor, int numArquivos);
+    void AchaPosicaoMenor(int numArquivos, Arquivo* arquivos, int& posicaoMenor);
+    void Merge(int numArquivos, int tamanhoBufferPorArquivo, string nome);
+    void LiberarMemoria(int numArquivos, Arquivo* arquivos, pacote* bufferDeSaida);
+    void PreencherObjetosArquivos(int numArquivos, Arquivo* arquivos, int tamanhoBufferPorArquivo);
+    int CriaArquivosOrdenados(string nome);
     int ResecreverEmArquivosDivididos(fstream& arquivo);
-    void PreencheBuffer(Arquivo* arquivo, int K);
+    void PreencheBuffer(Arquivo* arquivo, int tamanhoBufferPorArquivo);
+    void ApagaArquivosTemporarios(int numArqs)
+    {
+        for (int quantidadeArquivos = 1; quantidadeArquivos <= numArqs; quantidadeArquivos++)
+        {
+            stringstream name;
+            name << NomeArquivoTemporarioPadrao << quantidadeArquivos << ".bin";
+            remove(name.str().c_str());
+        }
+    }
 };
 void le_arquivo_bin(fstream& arquivo) {
     pacote umPacote;
     int linhas = 0;
-    while (!arquivo.eof()) {
-        arquivo.read((char*)&umPacote, sizeof(umPacote));
+    while (arquivo.read((char*)&umPacote, sizeof(umPacote))) {
         cout << umPacote.tempo << "; ";
         cout << umPacote.protocolo << "; ";
+        cout << endl;
         linhas++;
     }
 }
-void le_arquivo_bin(ifstream& arquivo, int *linhas ) {
+void le_arquivo_bin(fstream& arquivo, int &linhas ) {
     pacote umPacote;
     while (arquivo.read((char*)&umPacote, sizeof(umPacote))) {
-        cout << umPacote.indice << "; ";
-        cout << umPacote.tempo << "; ";
-        cout << umPacote.origem << "; ";
-        cout << umPacote.destino << "; ";
-        cout << umPacote.protocolo << "; ";
-        cout << umPacote.tamanho << "; ";
-        cout << umPacote.informacao << endl;
         linhas++;
     }
-    cout << "\n\n\n" << linhas;
 }
-int MergeSortExterno::criaArquivosOrdenados(string nome)
+int MergeSortExterno::CriaArquivosOrdenados(string nome)
 {
     fstream arquivo(nome, fstream::out | fstream::in | fstream::binary);  
     return ResecreverEmArquivosDivididos(arquivo);
@@ -93,7 +94,6 @@ int MergeSortExterno::ResecreverEmArquivosDivididos(fstream& arquivo)
     pacote pacotes[N];
     int quantidadeArquivos = 0, totalItens = 0;;
     fstream ArquivoTemp;
-    int teste = 0;
     while (arquivo.read((char*)&pacotes[totalItens], sizeof(pacote))) {  
         totalItens++;
         if (totalItens == N) {   
@@ -101,20 +101,19 @@ int MergeSortExterno::ResecreverEmArquivosDivididos(fstream& arquivo)
             quicksort.Quicksort(0, totalItens - 1);
             quantidadeArquivos++;
             stringstream name;
-            name << NomeArquivoPadrao << quantidadeArquivos << ".bin";
+            name << NomeArquivoTemporarioPadrao << quantidadeArquivos << ".bin";
             ArquivoTemp.open(name.str(), ios::out| ios::binary);
             ArquivoTemp.write((char*)&pacotes, sizeof(pacotes));
             ArquivoTemp.close();
             totalItens = 0;
         }
-        teste++;
     }
     if (totalItens > 0) {
         QuickSort quicksort(pacotes);
         quicksort.Quicksort(0, totalItens - 1);
         quantidadeArquivos++;
         stringstream name;
-        name << NomeArquivoPadrao << quantidadeArquivos << ".bin";
+        name << NomeArquivoTemporarioPadrao << quantidadeArquivos << ".bin";
         ArquivoTemp.open(name.str(), ios::out);
         ArquivoTemp.write((char*)&pacotes, sizeof(pacotes));
         ArquivoTemp.close();
@@ -122,37 +121,23 @@ int MergeSortExterno::ResecreverEmArquivosDivididos(fstream& arquivo)
     }
     return quantidadeArquivos;
 }
-void MergeSortExterno::Merge(int numArquivos, int K, string nome) {
-    pacote* bufferDeSaida = new pacote[K];
+void MergeSortExterno::Merge(int numArquivos, int tamanhoBufferPorArquivo, string nome) {
+    pacote* bufferDeSaida = new pacote[tamanhoBufferPorArquivo];
     Arquivo* arquivos;
     arquivos = new Arquivo[numArquivos];
-    for (int i = 0; i < numArquivos; i++)
-    {
-        stringstream name;
-        name << NomeArquivoPadrao << i+1 << ".bin"; 
-        arquivos[i].arquivo.open(name.str(), ios::binary | ios::out | ios::in);
-        arquivos[i].max = 0;
-        arquivos[i].pos = 0;
-        arquivos[i].buffer = new pacote[K];
-        //le_arquivo_bin(arquivos[i].arquivo);
-        PreencheBuffer(&arquivos[i], K);
-    }
-    int qtdBuffer = 0;
+    PreencherObjetosArquivos(numArquivos, arquivos, tamanhoBufferPorArquivo);
+    int qtdBuffer = 0, teste = 0;
     pacote menor;
-    int teste = 0;
-    while (ProcuraMenor(arquivos, K, &menor, numArquivos) == 1)
+    while (ProcuraMenor(arquivos, tamanhoBufferPorArquivo, &menor, numArquivos) == 1)
     {
         bufferDeSaida[qtdBuffer] = menor;
         qtdBuffer++;
         teste++;
-        if (qtdBuffer == K) {
-            fstream ArquivoTemp(NomeArquivoSaida, ios::binary | ios::out | ios::app);
+        if (qtdBuffer == tamanhoBufferPorArquivo) {
+            fstream arquivoTemp(NomeArquivoSaida, ios::binary | ios::out | ios::app);
             for (int i = 0; i < qtdBuffer; i++)
-            {
-                ArquivoTemp.write((char*)&bufferDeSaida[i], sizeof(bufferDeSaida[i]));
-            }
-           
-            ArquivoTemp.close();
+                arquivoTemp.write((char*)&bufferDeSaida[i], sizeof(bufferDeSaida[i]));
+            arquivoTemp.close();
             qtdBuffer = 0;
         }
     }
@@ -165,60 +150,91 @@ void MergeSortExterno::Merge(int numArquivos, int K, string nome) {
         ArquivoTemp.close();
         qtdBuffer = 0;
     }
+    LiberarMemoria(numArquivos, arquivos, bufferDeSaida);;
     
 }
-void MergeSortExterno::PreencheBuffer(Arquivo* arquivo, int K) {
+void MergeSortExterno::LiberarMemoria(int numArquivos, Arquivo* arquivos, pacote* bufferDeSaida)
+{
+    for (int i = 0; i < numArquivos; i++)
+    {
+        delete[] arquivos[i].buffer;
+    }
+    delete[] arquivos;
+    delete[] bufferDeSaida;
+}
+void MergeSortExterno::PreencherObjetosArquivos(int numArquivos, Arquivo* arquivos, int tamanhoBufferPorArquivo)
+{
+    for (int i = 0; i < numArquivos; i++)
+    {
+        stringstream name;
+        name << NomeArquivoTemporarioPadrao << i + 1 << ".bin";
+        arquivos[i].arquivo.open(name.str(), ios::binary | ios::out | ios::in);
+        arquivos[i].max = 0;
+        arquivos[i].pos = 0;
+        arquivos[i].buffer = new pacote[tamanhoBufferPorArquivo];
+        PreencheBuffer(&arquivos[i], tamanhoBufferPorArquivo);
+    }
+}
+void MergeSortExterno::PreencheBuffer(Arquivo* arquivo, int tamanhoBufferPorArquivo) {
     if (!arquivo->arquivo.is_open())
         return;
     arquivo->pos = 0;
     arquivo->max = 0;
-    for (int i = 0; i < K; i++)
+    pacote umPacote;
+    int tamanhoBufferCarregado = 0;
+    while (!arquivo->arquivo.eof() && tamanhoBufferCarregado < tamanhoBufferPorArquivo)
     {
-        if(!arquivo->arquivo.eof())
-        {
-            arquivo->arquivo.read((char*)&arquivo->buffer[arquivo->max], sizeof(arquivo->buffer[arquivo->max]));
+        arquivo->arquivo.read((char*)&umPacote, sizeof(umPacote));
+        if (!arquivo->arquivo.eof()) {
+            arquivo->buffer[arquivo->max] = umPacote;
             arquivo->max++;
+            tamanhoBufferCarregado++;
         }
-        else
-        {
-            arquivo->arquivo.close();
-            break;//trocar
-        }
+
     }
+    if (arquivo->arquivo.eof()) {
+        arquivo->arquivo.close();
+    }
+       
 
 }
 
-int MergeSortExterno::ProcuraMenor(Arquivo *arquivos, int K, pacote* menor, int numArquivos) {
-    int idx = -1;
+int MergeSortExterno::ProcuraMenor(Arquivo *arquivos, int tamanhoBufferPorArquivo, pacote* menor, int numArquivos) {
+    int posicaoMenor = -1;
+    AchaPosicaoMenor(numArquivos, arquivos, posicaoMenor);
+    if(posicaoMenor != -1)
+    {
+        *menor = arquivos[posicaoMenor].buffer[arquivos[posicaoMenor].pos];
+        arquivos[posicaoMenor].pos++;
+        if (arquivos[posicaoMenor].pos == arquivos[posicaoMenor].max)
+            PreencheBuffer(&arquivos[posicaoMenor], tamanhoBufferPorArquivo);
+        return 1;
+    }
+    else
+        return 0;
+}
+
+void MergeSortExterno::AchaPosicaoMenor(int numArquivos, Arquivo* arquivos, int& posicaoMenor)
+{
     for (int i = 0; i < numArquivos; i++)
     {
         if (arquivos[i].pos < arquivos[i].max) {
-            if (idx == -1)
-                idx = i;
+            if (posicaoMenor == -1)
+                posicaoMenor = i;
             else {
-                if (strcmp(arquivos[i].buffer[arquivos[i].pos].protocolo, arquivos[idx].buffer[arquivos[idx].pos].protocolo) <= 0) {
-                    if (arquivos[i].buffer[arquivos[i].pos].protocolo == arquivos[i].buffer[arquivos[idx].pos].protocolo) {
-                        if (arquivos[i].buffer[arquivos[i].pos].tempo >= arquivos[i].buffer[arquivos[idx].pos].tempo) {
-                            idx = i;
+                if (strcmp(arquivos[i].buffer[arquivos[i].pos].protocolo, arquivos[posicaoMenor].buffer[arquivos[posicaoMenor].pos].protocolo) <= 0) {
+                    if (strcmp(arquivos[i].buffer[arquivos[i].pos].protocolo, arquivos[posicaoMenor].buffer[arquivos[posicaoMenor].pos].protocolo) == 0) {
+                        if (arquivos[i].buffer[arquivos[i].pos].tempo >= arquivos[posicaoMenor].buffer[arquivos[posicaoMenor].pos].tempo) {
+                            posicaoMenor = i;
                         }
                     }
                     else {
-                        idx = i;
+                        posicaoMenor = i;
                     }
                 }
             }
         }
     }
-    if( idx != -1)
-    {
-        *menor = arquivos[idx].buffer[arquivos[idx].pos];
-        arquivos[idx].pos++;
-        if (arquivos[idx].pos == arquivos[idx].max)
-            PreencheBuffer(&arquivos[idx], K);
-        return 1;
-    }
-    else
-        return 0;
 }
 
 
@@ -227,17 +243,9 @@ int MergeSortExterno::ProcuraMenor(Arquivo *arquivos, int K, pacote* menor, int 
 
 int main() {
     MergeSortExterno mergeSortExterno;
-    int count = 0;
     //fstream arquivo_bin_read(NomeArquivoSaida, ios::in|ios::binary);
     //le_arquivo_bin(arquivo_bin_read);
     mergeSortExterno.OrdenarExternamente(NomeArquivoEntrada);
-    /*for (int i = 1; i < 100; i++)
-    {
-        stringstream name;
-        name << NomeArquivoPadrao << i << ".bin";
-        fstream arquivo_bin_read(name.str(), ios::in | ios::binary);
-        le_arquivo_bin(arquivo_bin_read);
-    }*/
 
     return 0;
 }
@@ -246,36 +254,36 @@ void QuickSort::Quicksort(const int start, const int end)
 {
     if (start >= end) return;
 
-    int pivot = Partition(start, end);
+    int pivo = Particionar(start, end);
 
-    Quicksort(start, pivot - 1);
-    Quicksort(pivot + 1, end);
+    Quicksort(start, pivo - 1);
+    Quicksort(pivo + 1, end);
 }
 
-int QuickSort::Partition(const int start, const int end)
+int QuickSort::Particionar(const int start, const int end)
 {
     int i = start;
     for (int j = start; j < end; j++) {
 
         if (strcmp(pacotes[j].protocolo, pacotes[end].protocolo) <= 0) {
-           if (pacotes[j].protocolo == pacotes[end].protocolo) {
+           if (strcmp(pacotes[j].protocolo, pacotes[end].protocolo) == 0) {
                 if (pacotes[j].tempo >= pacotes[end].tempo) {
-                    Swap(i++, j);
+                    Trocar(i++, j);
                 }
             }
             else {
-                Swap(i++, j);
+                Trocar(i++, j);
             }
         }
     }
-    Swap(i, end);
+    Trocar(i, end);
 
     return i;
 }
 
-void QuickSort::Swap(int i, int j)
+void QuickSort::Trocar(int i, int j)
 {
-    pacote k = pacotes[i];
+    pacote pacoteAux = pacotes[i];
     pacotes[i] = pacotes[j];
-    pacotes[j] = k;
+    pacotes[j] = pacoteAux;
 }
